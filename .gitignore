@@ -4,6 +4,6 @@ __pycache__/
 processed/
 checkpoints/
 visualizations/
-f1_cache/
+f1_cache/fastf1_http_cache.sqlite
 f1_cache.zip
 results_summary.json
