@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+processed/
+checkpoints/
+visualizations/
+f1_cache/
+f1_cache.zip
+results_summary.json

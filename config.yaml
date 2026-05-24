@@ -1,0 +1,223 @@
+# ── Data ──────────────────────────────────────────────────
+data:
+  cache_dir: ./f1_cache
+  output_dir: ./processed
+  train_seasons: [2018, 2019, 2020, 2021]
+  val_season: 2022
+  test_season: 2023
+  selected_circuits: []
+  rate_limit_max_retries: 2
+  rate_limit_retry_seconds: 1800
+  top4_filter: false
+  selected_constructors: [Red Bull, Mercedes, Ferrari, McLaren]
+  fuel_kg_start: 110.0
+  fuel_consumption_per_lap: 2.3
+  fuel_lap_time_effect: 0.1495
+  track_evolution_fuel_effect: 0.1495
+  undercut_threat_gap_s: 3.0
+  undercut_threat_laps: 2
+  outlier_threshold: 1.35
+  sc_track_statuses: ['4', '5', '6', '7']
+  wet_compounds: ['INTERMEDIATE', 'WET']
+
+circuits:
+  abrasion:
+    Bahrain: 4
+    Saudi Arabia: 2
+    Australia: 3
+    Japan: 2
+    China: 3
+    Miami: 3
+    Emilia Romagna: 2
+    Monaco: 1
+    Canada: 3
+    Spain: 4
+    Austria: 2
+    Britain: 3
+    Hungary: 3
+    Belgium: 2
+    Netherlands: 3
+    Italy: 2
+    Singapore: 3
+    Qatar: 5
+    United States: 3
+    Mexico: 2
+    Brazil: 3
+    Las Vegas: 2
+    Abu Dhabi: 2
+
+tft:
+  hidden_size: 192
+  attention_head_size: 48
+  lstm_layers: 2
+  encoder_length: 20
+  prediction_length: 12
+  dropout: 0.15
+  learning_rate: 3.0e-4
+  learning_rate_min: 1.0e-4
+  batch_size: 64
+  max_epochs: 140
+  patience: 20
+  gradient_clip_val: 0.1
+  early_stopping_min_delta: 1.0e-4
+  quantiles: [0.1, 0.5, 0.9]
+  seed: 42
+  target_col: lap_time_delta_s
+  static_categoricals: [circuit_id, compound_type, team_id]
+  static_reals: [circuit_softness, historical_sc_prob]
+  known_time_varying_reals: [lap_norm, fuel_load_kg, track_evolution_delta, air_temp, humidity]
+  unknown_time_varying_reals:
+    - lap_time_delta_s
+    - deg_velocity
+    - deg_acceleration
+    - tire_age_laps
+    - tire_age_sq
+    - gap_ahead_s
+    - gap_ahead_trend
+    - undercut_threat
+  cliff_threshold_s: 1.0
+  cliff_lead_time_target: 2.0
+
+lstm:
+  input_dim: 12
+  hidden_size: 160
+  num_layers: 2
+  bidirectional: false
+  dropout: 0.2
+  static_dim: 8
+  n_classes: 3
+  seq_len: 10
+  focal_gamma: 2.0
+  focal_alpha: [0.774, 0.170, 0.056]
+  optimizer: adamw
+  weight_decay: 1.0e-4
+  lr_max: 2.0e-3
+  lr_pct_start: 0.3
+  batch_size: 96
+  max_epochs: 120
+  patience: 16
+  gradient_clip: 1.0
+  seed: 42
+  class_sampling_power: 1.35
+  class_sampling_boosts: [1.0, 3.0, 8.0]
+  sampler_target_distribution: [0.45, 0.30, 0.25]
+  pit_now_threshold_grid: [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]
+  calibration_selection_metric: macro_f1
+  features:
+    - lap_time_delta_s
+    - deg_velocity
+    - deg_acceleration
+    - tire_age_laps
+    - tire_age_sq
+    - fuel_load_kg
+    - gap_ahead_s
+    - gap_ahead_trend
+    - undercut_threat
+    - sc_or_vsc_flag
+    - lap_norm
+    - Position
+  static_features:
+    - circuit_id_enc
+    - compound_enc
+    - starting_position_norm
+    - circuit_softness
+    - track_temp_category
+    - historical_sc_prob
+    - team_id_enc
+    - lap_count_norm
+
+lgb_pit:
+  n_estimators: 500
+  max_depth: 5
+  num_leaves: 31
+  learning_rate: 0.03
+  min_child_samples: 25
+  subsample: 0.8
+  colsample_bytree: 0.8
+  reg_alpha: 0.1
+  reg_lambda: 2.0
+  class_weight: balanced
+  early_stopping_rounds: 50
+  seed: 42
+  features:
+    - tire_age_laps
+    - tire_age_sq
+    - compound_enc
+    - circuit_id_enc
+    - team_id_enc
+    - fuel_load_kg
+    - lap_norm
+    - lap_count_norm
+    - TrackTemp
+    - AirTemp
+    - Humidity
+    - track_temp_category
+    - gap_ahead_s
+    - gap_ahead_trend
+    - undercut_threat
+    - sc_or_vsc_flag
+    - Position
+    - starting_position_norm
+    - circuit_softness
+    - historical_sc_prob
+    - lap_time_delta_s
+    - deg_velocity
+    - deg_acceleration
+
+xgboost:
+  n_estimators: 400
+  max_depth: 5
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.7
+  min_child_weight: 3
+  gamma: 0.1
+  tree_method: hist
+  eval_metric: mlogloss
+  early_stopping_rounds: 30
+  seed: 42
+  fingerprint_dims: 6
+  target_col: compound_chosen
+
+eval:
+  focus_team: Red Bull Racing
+  pit_stop_time_loss_s: 22.0
+  strategy_policy: aggressive
+  min_time_gain_s: 0.0
+  allow_late_divergence: true
+  tft_mae_target: 0.15
+  tft_p90_coverage_target: 0.90
+  tft_cliff_lead_target: 2.0
+  lstm_macro_f1_target: 0.72
+  lstm_pit_now_recall_target: 0.68
+  lstm_pit_now_precision_target: 0.55
+  lstm_mcc_target: 0.55
+  xgb_accuracy_target: 0.70
+  loco_permanent_mae_target: 0.22
+  loco_street_mae_target: 0.40
+  street_circuits: [Monaco, Singapore]
+  heuristic_circuits:
+    barcelona_soft_deg_threshold: 0.15
+    monaco_soft_positive_threshold: 0.10
+    singapore_medium_threshold: 0.08
+    qatar_soft_neg_threshold: 0.12
+
+paths:
+  tft_checkpoint: ./checkpoints/tft_best.ckpt
+  lstm_checkpoint: ./checkpoints/lstm_best.pt
+  lstm_calibration: ./checkpoints/lstm_calibration.json
+  lgb_pit_model: ./checkpoints/lgb_pit.pkl
+  lgb_pit_calibration: ./checkpoints/lgb_pit_calibration.json
+  xgb_model: ./checkpoints/xgb_compound.json
+  scaler_lstm: ./checkpoints/scaler_lstm.pkl
+  fingerprint_table: ./processed/circuit_fingerprints.parquet
+  viz_output: ./visualizations
+
+viz:
+  degradation_circuits: [Bahrain, Britain, Spain, Italy, Monaco, Singapore]
+  shap_circuits: [Spain, Monaco, Singapore, Italy]
+  strategy_overlay_season: 2023
+  attention_examples:
+    - {race: Bahrain, driver: VER, pitstop: 1}
+    - {race: Monaco, driver: LEC, pitstop: 1}
+    - {race: Singapore, driver: SAI, pitstop: 1}
